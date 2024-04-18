@@ -1,19 +1,30 @@
 from pcapng import FileScanner
 from httprequest import HTTPRequest
+import re
+
+def FindHttpRequestIndex(packet_str):
+    regex_pattern = r"(?:GET|POST|PUT|DELETE|PATCH|HEAD) \/.+ HTTP\/1\.1\\r\\n"
+    
+    match = re.search(regex_pattern, packet_str)
+    if match:
+        return match.start()
+    else:
+        return -1
 
 def test():
     with open(r"C:\Users\maxim\OneDrive\Desktop\Programming\Projects_Work\Pickup_Files\server\mixed.pcapng", 'rb') as pcap:
         scanner = FileScanner(pcap)
         
-        for block in scanner:
-            print(str(block) + "\n")
-            if hasattr(block, 'packet_data') == False:
+        for packet in scanner:
+            if hasattr(packet, 'packet_data') == False:
                 continue
-            block_str = str(block.packet_data)
-            method_index = block_str.find("GET")
-            if method_index == -1:
+            packet_str = str(packet.packet_data)
+            
+            http_request_index = FindHttpRequestIndex(packet_str)
+            if http_request_index == -1:
                 continue
-            http_request_string = block_str[method_index:]
+            
+            http_request_string = packet_str[http_request_index:]
             http_request = HTTPRequest(http_request_string)
 
 
