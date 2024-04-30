@@ -1,7 +1,9 @@
-from pcapng import FileScanner
-from httprequest import HTTPRequest
+from scapy.all import *
+from scapy.layers.http import HTTPRequest
+from HttpRequestBuilder import HTTPRequestBuilder
+from concurrent.futures import ThreadPoolExecutor
 import re
-
+import requests
 def FindHttpRequestIndex(packet_str):
     regex_pattern = r"(?:GET|POST|PUT|DELETE|PATCH|HEAD) \/.+ HTTP\/1\.1\\r\\n"
     
@@ -12,23 +14,18 @@ def FindHttpRequestIndex(packet_str):
         return -1
 
 def test():
-    with open(r"C:\Users\maxim\OneDrive\Desktop\Programming\Projects_Work\Pickup_Files\server\mixed.pcapng", 'rb') as pcap:
-        scanner = FileScanner(pcap)
-        
-        for packet in scanner:
-            if hasattr(packet, 'packet_data') == False:
-                continue
-            packet_str = str(packet.packet_data)
-            
-            http_request_index = FindHttpRequestIndex(packet_str)
-            if http_request_index == -1:
-                continue
-            
-            http_request_string = packet_str[http_request_index:]
-            http_request = HTTPRequest(http_request_string)
+    packets = rdpcap(r"C:\Users\maxim\OneDrive\Desktop\Programming\Projects_Work\Pickup_Files\server\pcap_files\testfile.pcapng")
 
+    for packet in packets:
+        if packet.haslayer(HTTPRequest) and (IP in packet or IPv6 in packet): # type: ignore
+            httpRequest = HTTPRequestBuilder(packet)
 
-
+            try:
+                print(httpRequest.dst_url)
+                response = requests.request(method=httpRequest.method, url=httpRequest.dst_url, data=httpRequest.body, headers=httpRequest.headers)
+                print(response._content)
+            except Exception as e:
+                print(e)
 
 if __name__ == "__main__":
     test()
